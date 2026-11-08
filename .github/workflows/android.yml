@@ -40,7 +40,8 @@ jobs:
       - name: Align Java and Kotlin JVM targets
         shell: bash
         run: |
-          cat > "$PROJECT_DIR/ci-jvm-target.gradle" <<'EOF'
+          CI_SCRIPT="$GITHUB_WORKSPACE/ci-jvm-target.gradle"
+          cat > "$CI_SCRIPT" <<'EOF'
           allprojects {
               tasks.withType(org.gradle.api.tasks.compile.JavaCompile).configureEach {
                   sourceCompatibility = '17'
@@ -52,7 +53,7 @@ jobs:
           }
           EOF
       - name: Build debug APK
-        run: gradle --no-daemon -I "$PROJECT_DIR/ci-jvm-target.gradle" -p "$PROJECT_DIR" :app:assembleDebug
+        run: gradle --no-daemon -I "$GITHUB_WORKSPACE/ci-jvm-target.gradle" -p "$GITHUB_WORKSPACE/$PROJECT_DIR" :app:assembleDebug
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
