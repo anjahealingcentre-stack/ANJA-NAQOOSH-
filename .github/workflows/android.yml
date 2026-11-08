@@ -42,13 +42,16 @@ jobs:
         run: |
           CI_SCRIPT="$GITHUB_WORKSPACE/ci-jvm-target.gradle"
           cat > "$CI_SCRIPT" <<'EOF'
+          import org.gradle.api.tasks.compile.JavaCompile
           allprojects {
-              tasks.withType(org.gradle.api.tasks.compile.JavaCompile).configureEach {
+              tasks.withType(JavaCompile).configureEach {
                   sourceCompatibility = '17'
                   targetCompatibility = '17'
               }
-              tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-                  kotlinOptions.jvmTarget = '17'
+              tasks.configureEach { task ->
+                  if (task.class.name.contains('KotlinCompile')) {
+                      task.kotlinOptions.jvmTarget = '17'
+                  }
               }
           }
           EOF
