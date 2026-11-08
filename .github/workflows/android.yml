@@ -37,6 +37,56 @@ jobs:
           fi
           PROJECT_DIR="$(dirname "$SETTINGS_FILE")"
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+      - name: Normalize Arabic, Urdu and Persian abjad letters
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          files = list(Path("extracted").rglob("MainActivity.kt"))
+          if not files:
+              raise SystemExit("MainActivity.kt not found in extracted source")
+          p = files[0]
+          s = p.read_text(encoding="utf-8")
+          old = '''    val total = input.sumOf { values[it] ?: 0 }
+              val known = input.filter { values.containsKey(it) }
+              val unknown = input.filter { !values.containsKey(it) && !it.isWhitespace() }
+              val breakdown = known.map { "$it = ${values[it]}" }'''
+          new = '''    val total = input.sumOf { normalizedAbjadValue(it, values) ?: 0 }
+              val known = input.filter { normalizedAbjadValue(it, values) != null }
+              val unknown = input.filter { !it.isWhitespace() && !it.isLetterOrDigit().not() && normalizedAbjadValue(it, values) == null }
+              val breakdown = known.map { "$it = ${normalizedAbjadValue(it, values)}" }'''
+          if old not in s:
+              old2 = '''    val total = input.sumOf { values[it] ?: 0 }
+              val known = input.filter { values.containsKey(it) }
+              val unknown = input.filter { !values.containsKey(it) && !it.isWhitespace() }
+              val breakdown = known.map { "$it = ${values[it]}" }'''
+              if old2 not in s:
+                  raise SystemExit("Expected abjad calculation block not found; refusing unsafe patch")
+              old = old2
+          s = s.replace(old, new, 1)
+          marker = "@Composable\nfun AbjadScreen"
+          helper = '''private fun normalizedAbjadValue(ch: Char, values: Map<Char, Int>): Int? {
+              if (ch == 'ـ' || Character.getType(ch) == Character.NON_SPACING_MARK.toInt()) return null
+              val base = when (ch) {
+                  'ہ', 'ۀ', 'ة' -> 'ه'
+                  'ی', 'ى', 'ئ' -> 'ي'
+                  'أ', 'إ', 'آ' -> 'ا'
+                  'ؤ' -> 'و'
+                  'ء' -> 'ا'
+                  else -> ch
+              }
+              return values[base]
+          }
+
+          @Composable
+          fun AbjadScreen'''
+          if "private fun normalizedAbjadValue" not in s:
+              if marker not in s:
+                  raise SystemExit("AbjadScreen marker not found")
+              s = s.replace(marker, helper, 1)
+          p.write_text(s, encoding="utf-8")
+          print("Patched:", p)
+          PY
       - name: Align Kotlin JVM target with Android Java target
         shell: bash
         run: |
