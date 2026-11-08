@@ -37,20 +37,15 @@ jobs:
           fi
           PROJECT_DIR="$(dirname "$SETTINGS_FILE")"
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-      - name: Align Java and Kotlin JVM targets
+      - name: Align Kotlin JVM target with Android Java target
         shell: bash
         run: |
           CI_SCRIPT="$GITHUB_WORKSPACE/ci-jvm-target.gradle"
           cat > "$CI_SCRIPT" <<'EOF'
-          import org.gradle.api.tasks.compile.JavaCompile
           allprojects {
-              tasks.withType(JavaCompile).configureEach {
-                  sourceCompatibility = '17'
-                  targetCompatibility = '17'
-              }
               tasks.configureEach { task ->
                   if (task.class.name.contains('KotlinCompile')) {
-                      task.kotlinOptions.jvmTarget = '17'
+                      task.kotlinOptions.jvmTarget = '1.8'
                   }
               }
           }
