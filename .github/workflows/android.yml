@@ -37,8 +37,22 @@ jobs:
           fi
           PROJECT_DIR="$(dirname "$SETTINGS_FILE")"
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+      - name: Align Java and Kotlin JVM targets
+        shell: bash
+        run: |
+          cat > "$PROJECT_DIR/ci-jvm-target.gradle" <<'EOF'
+          allprojects {
+              tasks.withType(org.gradle.api.tasks.compile.JavaCompile).configureEach {
+                  sourceCompatibility = '17'
+                  targetCompatibility = '17'
+              }
+              tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+                  kotlinOptions.jvmTarget = '17'
+              }
+          }
+          EOF
       - name: Build debug APK
-        run: gradle --no-daemon -p "$PROJECT_DIR" :app:assembleDebug
+        run: gradle --no-daemon -I "$PROJECT_DIR/ci-jvm-target.gradle" -p "$PROJECT_DIR" :app:assembleDebug
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
